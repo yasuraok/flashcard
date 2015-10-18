@@ -27,15 +27,19 @@ function App(datapath){ return{
     fs.writeFileSync(this.datapath + suffix, buf, 'utf-8');
   },
 
-  addNewCard : function(obj){
-    if (obj.i != undefined && obj.o != undefined){
-      // backup
-      var formatted = new Date().toFormat(".YYYYMMDDHH24MISS");
-      this.store(formatted);      // 保存
-      console.log("Stored backup", formatted);
+  backup : function(){
+    // backup
+    var formatted = new Date().toFormat(".YYYYMMDDHH24MISS");
+    this.store(formatted);      // 保存
+    console.log("Stored backup", formatted);
+  },
 
-      // update
-      var record = {"i": obj.i, "o":obj.o, "t":[0]};
+  createCard : function(obj){
+    if (obj.i != undefined && obj.o != undefined){
+      this.backup();
+
+      obj.seq += 1;
+      var record = {"n": obj.seq, "i": obj.i, "o":obj.o, "t":[0]};
       this.obj.data.push(record);
 
       console.log("new record", record);
@@ -47,11 +51,32 @@ function App(datapath){ return{
     }
   },
 
+  updateCard : function(obj){
+    if (obj.n != undefined && obj.i != undefined && obj.o != undefined){
+      this.backup();
+
+      for(var j=0; j<this.obj.data.length; ++j){
+        if(this.obj.data[j].n === obj.n){
+          this.obj.data[j].i = obj.i;
+          this.obj.data[j].o = obj.o;
+
+          this.store();
+          this.updateList(); // 最新データ配信
+          return;
+        }
+      }
+
+      console.log("Error: no record with id " + obj.n + " found.");
+    }
+    console.log("Error: undefined format", obj);
+  },
+
   // websocketとしての応答内容を記述
   onWebSocket : function(socket){
     this.updateList(); // websocket接続時に一度現状を送る
 
-    socket.on("add_new_card", this.addNewCard.bind(this) );
+    socket.on("create_card", this.createCard.bind(this) );
+    socket.on("update_card", this.updateCard.bind(this) );
   },
 
 }}

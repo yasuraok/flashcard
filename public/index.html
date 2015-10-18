@@ -72,7 +72,7 @@
           var output = lines[1];
           var send = {"i": input, "o": output};
           console.log(send);
-          this.socket.emit("add_new_card", send);
+          this.socket.emit("create_card", send);
         } else {
           errMsg = "format error";
         }
@@ -83,16 +83,49 @@
       setRandomCard: function(){
         if (this.obj.data.length){
           this.currentIdx  = Math.floor( Math.random() * this.obj.data.length);
-          var card = this.obj.data[this.currentIdx];
-          document.getElementById("card_id").innerHTML = (this.currentIdx+1) + "/" + this.obj.data.length
-          document.getElementById("input"  ).innerHTML = card.i
-          document.getElementById("output" ).innerHTML = ""
+          this.showCard();
         }
       },
 
+      // 質問状態にする
+      showCard: function(){
+        var card = this.obj.data[this.currentIdx];
+        document.getElementById("card_id").innerHTML = (this.currentIdx+1) + "/" + this.obj.data.length;
+        document.getElementById("input"  ).innerHTML = card.i;
+        document.getElementById("output" ).innerHTML = "";
+        document.getElementById("input_form" ).style.display = "none";
+        document.getElementById("output_form").style.display = "none";
+
+        document.getElementById("show" ).style.display = "block";
+        document.getElementById("edit" ).style.display = "none";
+      },
+
+      // 正解表示状態にする
       showAnswer: function(){
         var card = this.obj.data[this.currentIdx];
-        document.getElementById("output").innerHTML = card.o
+        document.getElementById("output").innerHTML = card.o;
+      },
+
+      // edit状態にする
+      editCard: function(){
+        var card = this.obj.data[this.currentIdx];
+        document.getElementById("input" ).innerHTML = "";
+        document.getElementById("input_form" ).value = card.i;
+        document.getElementById("input_form" ).style.display = "block";
+        document.getElementById("output").innerHTML = "";
+        document.getElementById("output_form").value = card.o;
+        document.getElementById("output_form").style.display = "block";
+
+        document.getElementById("show" ).style.display = "none";
+        document.getElementById("edit" ).style.display = "block";
+      },
+
+      updateCard: function(){
+        var input  = document.getElementById("input_form" ).value;
+        var output = document.getElementById("output_form").value;
+        var send = {"n": this.currentIdx, "i": input, "o": output};
+        this.socket.emit("update_card", send);
+        this.showCard();
       },
 
       // members
@@ -119,17 +152,28 @@
     </tr>
     <tr>
       <td>表</td>
-      <!-- <td><textarea id="input" > </textarea></td> -->
-      <td id="input" > </td>
+      <td>
+        <span id="input"></span>
+        <textarea id="input_form" ></textarea>
+      </td>
     </tr>
     <tr>
       <td>裏</td>
-      <td id="output"></td>
+      <td>
+        <span id="output"></span>
+        <textarea id="output_form" ></textarea>
+      </td>
     </tr>
   </table>
-  <button onclick='ctrl.showAnswer();'>表示</button>
-  <button onclick='ctrl.setRandomCard();'>次</button>
-  <button>編集</button>
+  <div id="show">
+    <button onclick='ctrl.showAnswer();'>表示</button>
+    <button onclick='ctrl.setRandomCard();'>次</button>
+    <button onclick='ctrl.editCard();'>編集</button>
+  </div>
+  <div id="edit">
+    <button onclick='ctrl.updateCard();'>更新</button>
+    <button onclick='ctrl.showCard();'>取消</button>
+  </div>
 
 
 
