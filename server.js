@@ -1,3 +1,4 @@
+require('date-utils'); // > Date
 var fs          = require('fs');
 var https       = require('https');
 var auth        = require('http-auth');
@@ -19,13 +20,20 @@ function App(){ return{
     g_io.sockets.emit("update_list", this.obj);
   },
 
-  store : function(){
+  store : function(suffix){
+    var suffix = (suffix !== undefined) ? suffix : "";
     var buf = JSON.stringify(this.obj, null, 2);
-    fs.writeFileSync(FILE_PATH, buf, 'utf-8');
+    fs.writeFileSync(CONFIG.datapath + suffix, buf, 'utf-8');
   },
 
   addNewCard : function(obj){
     if (obj.i != undefined && obj.o != undefined){
+      // backup
+      var formatted = new Date().toFormat(".YYYYMMDDHH24MISS");
+      this.store(formatted);      // 保存
+      console.log("Stored backup", formatted);
+
+      // update
       var record = {"i": obj.i, "o":obj.o, "t":[0]};
       this.obj.data.push(record);
 
