@@ -2,9 +2,10 @@ require('date-utils'); // > Date
 var fs          = require('fs');
 var https       = require('https');
 var auth        = require('http-auth');
+var crypto      = require('crypto');
 var connect     = require('connect');
 var serveStatic = require('serve-static');
-var socketio    = require("socket.io");
+var socketio    = require('socket.io');
 
 var CONFIG      = JSON.parse(fs.readFileSync(__dirname + "/config.json", 'utf8'));
 var PUBLIC_DIR  = __dirname + "/public";
@@ -94,11 +95,16 @@ var g_sslopts = {
 }
 
 // Basic authentication
-var authMiddleware = auth.connect(auth.basic({
-        realm: "Basic authentication.",
-    }, function (username, password, callback) { // Custom authentication method.
-        callback(username === CONFIG.username && password === CONFIG.password);
-    }
+var authMiddleware = auth.connect(
+  auth.basic({realm: "Basic authentication."},
+             function (username, password, callback) { // Custom authentication method.
+
+    var sha512 = crypto.createHash('sha512');
+    sha512.update(password)
+    var hash = sha512.digest('hex')
+
+    callback(username === CONFIG.username && hash === CONFIG.password);
+  }
 ));
 
 // httpsサーバーの起動
