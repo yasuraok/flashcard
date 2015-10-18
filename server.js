@@ -6,14 +6,15 @@ var connect     = require('connect');
 var serveStatic = require('serve-static');
 var socketio    = require("socket.io");
 
-var CONFIG      = JSON.parse(fs.readFileSync("config.json", 'utf8'));
+var CONFIG      = JSON.parse(fs.readFileSync(__dirname + "/config.json", 'utf8'));
 var PUBLIC_DIR  = __dirname + "/public";
 
 //==============================================================================
 // アプリ本体
 //==============================================================================
-function App(){ return{
-  obj : JSON.parse(fs.readFileSync(CONFIG.datapath, 'utf8')),
+function App(datapath){ return{
+  datapath: datapath,
+  obj     : JSON.parse(fs.readFileSync(datapath, 'utf8')),
 
   updateList : function(){
     // broadcast all clients (including the sender)
@@ -23,7 +24,7 @@ function App(){ return{
   store : function(suffix){
     var suffix = (suffix !== undefined) ? suffix : "";
     var buf = JSON.stringify(this.obj, null, 2);
-    fs.writeFileSync(CONFIG.datapath + suffix, buf, 'utf-8');
+    fs.writeFileSync(this.datapath + suffix, buf, 'utf-8');
   },
 
   addNewCard : function(obj){
@@ -59,12 +60,12 @@ function App(){ return{
 // start!
 //==============================================================================
 
-var g_app       = App();
+var g_app = App(__dirname + "/" + CONFIG.datapath);
 
 // openssl req -new -newkey rsa:2048 -nodes -subj "/O=test" -keyout pem/key.pem -out pem/csr.pem && openssl x509 -req -in pem/csr.pem -signkey pem/key.pem -out pem/cert.pem
 var g_sslopts = {
-  key:  fs.readFileSync('pem/key.pem'),
-  cert: fs.readFileSync('pem/cert.pem'),
+  key:  fs.readFileSync(__dirname + "/" + 'pem/key.pem'),
+  cert: fs.readFileSync(__dirname + "/" + 'pem/cert.pem'),
 }
 
 // Basic authentication
