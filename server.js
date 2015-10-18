@@ -1,18 +1,18 @@
 var fs          = require('fs');
-var http        = require('http');
+var https       = require('https');
+var auth        = require('http-auth');
 var connect     = require('connect');
 var serveStatic = require('serve-static');
-var socketio    = require("socket.io")
+var socketio    = require("socket.io");
 
-var LISTEN_PORT = 16080;
-var PUBLIC_DIR  = __dirname + "/public"
-var FILE_PATH   = "data.json"
+var CONFIG      = JSON.parse(fs.readFileSync("config.json", 'utf8'));
+var PUBLIC_DIR  = __dirname + "/public";
 
 //==============================================================================
 // アプリ本体
 //==============================================================================
 function App(){ return{
-  obj : JSON.parse(fs.readFileSync(FILE_PATH, 'utf8')),
+  obj : JSON.parse(fs.readFileSync(CONFIG.datapath, 'utf8')),
 
   updateList : function(){
     // broadcast all clients (including the sender)
@@ -50,21 +50,37 @@ function App(){ return{
 //==============================================================================
 // start!
 //==============================================================================
+
 var g_app       = App();
 
-// PUBLIC_DIR以下を普通のhttpサーバーとしてlisten
+// openssl req -new -newkey rsa:2048 -nodes -subj "/O=test" -keyout pem/key.pem -out pem/csr.pem && openssl x509 -req -in pem/csr.pem -signkey pem/key.pem -out pem/cert.pem
+var g_sslopts = {
+  key:  fs.readFileSync('pem/key.pem'),
+  cert: fs.readFileSync('pem/cert.pem'),
+}
+
+// Basic authentication
+var authMiddleware = auth.connect(auth.basic({
+        realm: "Basic authentication.",
+    }, function (username, password, callback) { // Custom authentication method.
+        callback(username === CONFIG.username && password === CONFIG.password);
+    }
+));
+
+// httpsサーバーの起動
 var g_httpApp = connect();
-g_httpApp.use(serveStatic(PUBLIC_DIR));
-var g_server = http.createServer(g_httpApp);
-g_server.listen(LISTEN_PORT);
+g_httpApp.use(authMiddleware);          // Basic認証をつなぐ
+g_httpApp.use(serveStatic(PUBLIC_DIR)); // PUBLIC_DIR以下を普通のhttpサーバーとしてlisten
+var g_server = https.createServer(g_sslopts, g_httpApp);
+g_server.listen(CONFIG.listen);
 
 // websocketとしてlistenして、応答内容を記述
 var g_io = socketio.listen(g_server);
 g_io.sockets.on("connection", g_app.onWebSocket.bind(g_app));
 
 console.log("================================================");
-console.log("listening web socket on port " + LISTEN_PORT);
-console.log("connection control at http://localhost:" + LISTEN_PORT + "/");
+console.log("listening web socket on port " + CONFIG.listen);
+console.log("connection control at https://localhost:" + CONFIG.listen + "/");
 console.log("================================================");
 
 //==============================================================================

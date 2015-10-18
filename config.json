@@ -1,0 +1,6 @@
+{
+  "listen":   16080,
+  "datapath": "data.json",
+  "username": "test",
+  "password": "test"
+}
